@@ -1,0 +1,8 @@
+# 不上传本地缓存数据和结果
+data/raw/
+data/results/
+*.xlsx
+*.csv
+
+# 不上传真实 config
+src/config.py
