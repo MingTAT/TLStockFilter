@@ -33,3 +33,49 @@ def pass_ma_filter(df, ma_list=MA_LIST):
     except Exception as e:
         print(f"[均线过滤异常] {e}")
         return False
+    
+
+def pass_financial_filter(pro, ts_code):
+    try:
+        # 获取最近一个交易日
+        latest_trade_date = pro.trade_cal(
+            exchange='', start_date='20250601', end_date='20250624', is_open='1'
+        ).sort_values('cal_date', ascending=False).iloc[0]['cal_date']
+
+        # 获取净利润
+        income = pro.fina_indicator(
+            ts_code=ts_code, period=latest_trade_date, fields="ts_code,netprofit"
+        )
+        if income.empty or income.iloc[0]['netprofit'] <= 0:
+            return False
+
+        # 获取PB
+        basic = pro.daily_basic(
+            ts_code=ts_code, trade_date=latest_trade_date, fields="pb,close"
+        )
+        if basic.empty:
+            return False
+
+        pb = basic.iloc[0]['pb']
+        if not (0 < pb < 3):
+            return False
+
+        # 获取近一年涨幅
+        df = pro.daily(
+            ts_code=ts_code,
+            start_date='20240624', end_date='20250624',
+            fields='ts_code,trade_date,close'
+        )
+        df = df.sort_values("trade_date", ascending=False)
+        if df.empty or len(df) < 2:
+            return False
+
+        pct_chg = (df.iloc[0]['close'] - df.iloc[-1]['close']) / df.iloc[-1]['close'] * 100
+        if pct_chg > 50:
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"[财务过滤异常] {ts_code}: {e}")
+        return False
